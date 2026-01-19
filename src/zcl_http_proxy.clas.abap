@@ -30,6 +30,7 @@ CLASS zcl_http_proxy IMPLEMENTATION.
 
   METHOD if_http_extension~handle_request.
     DATA: lv_response TYPE string,
+          lv_error_msg TYPE string,
           lt_fields   TYPE  tihttpnvp.
     me->path = server->request->get_header_field( '~path' ).
     me->method = server->request->get_method( ).
@@ -47,12 +48,21 @@ CLASS zcl_http_proxy IMPLEMENTATION.
     IF me->destination IS NOT INITIAL.
       " Here you would add the logic to perform the HTTP call to the target system
       " using the destination and target_path.
-      cl_http_client=>create_by_destination(
-        EXPORTING
-          destination = me->destination
-        IMPORTING
-          client      = DATA(lo_http_client)
-      ).
+      TRY.
+          cl_http_client=>create_by_destination(
+            EXPORTING
+              destination = me->destination
+            IMPORTING
+              client      = DATA(lo_http_client)
+          ).
+        CATCH cx_http_client_exception INTO DATA(lx_create_exception).
+          " Handle HTTP client creation failure
+          lv_error_msg = |HTTP client creation failed: { lx_create_exception->get_text( ) }|.
+          server->response->set_status( code = 502 reason = 'Bad Gateway' ).
+          server->response->set_cdata( lv_error_msg ).
+          RETURN.
+      ENDTRY.
+
       " Read the Accept header from the original request and set it for the proxied request
       DATA(lv_accept) = server->request->get_header_field( 'accept' ).
       lo_http_client->request->set_header_field( name = 'Accept' value = lv_accept ).
@@ -75,10 +85,19 @@ CLASS zcl_http_proxy IMPLEMENTATION.
       " Set the target path
       cl_http_utility=>set_request_uri( request = lo_http_client->request uri = me->target_path ).
 
-      " Send the request to the target system
-      lo_http_client->send( ).
-      " Receive the response from the target system
-      lo_http_client->receive( ).
+      TRY.
+          " Send the request to the target system
+          lo_http_client->send( ).
+          " Receive the response from the target system
+          lo_http_client->receive( ).
+        CATCH cx_http_client_exception INTO DATA(lx_send_receive_exception).
+          " Handle connection issues and send/receive failures
+          lv_error_msg = |HTTP communication failed: { lx_send_receive_exception->get_text( ) }|.
+          server->response->set_status( code = 504 reason = 'Gateway Timeout' ).
+          server->response->set_cdata( lv_error_msg ).
+          RETURN.
+      ENDTRY.
+
       " Set the response back to the original caller
       server->response->set_data( lo_http_client->response->get_data( ) ).
       " Read and set the Content-Type header
