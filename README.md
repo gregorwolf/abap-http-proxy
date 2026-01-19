@@ -45,3 +45,11 @@ S4HANA->>User: Fiori App Displays Data to End User
 - UI5/Fiori application hosted on BTP: Integration in the on-premise SAP Fiori Launchpad via Link Tile. Will open the app in a new browser tab.
 - UI5/Fiori application on ABAP system using CDS OData service based on data replication from BTP to on-premise system: Implementation of the data replication can be complex, CDS based OData service will be easy.
 - UI5/Fiori application on ABAP system using CDS OData service based on direct access to BTP OData service: S/4HANA until 2023 does only support Service Consumption Models for RFC and Web Services.
+
+## Functionality in Detail
+
+When you create the SICF Service pointing to ZCL_HTTP_PROXY as /zproxy then the requests have to use this URL pattern:
+
+```
+/zproxy/<SM59 Destination Name>/<Path to External API Resource>
+```
