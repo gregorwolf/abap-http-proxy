@@ -53,3 +53,7 @@ When you create the SICF Service pointing to ZCL_HTTP_PROXY as /zproxy then the 
 ```
 /zproxy/<SM59 Destination Name>/<Path to External API Resource>
 ```
+
+## Features
+
+- Tested with a read only OData V4 API
