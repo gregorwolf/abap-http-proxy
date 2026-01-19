@@ -30,6 +30,7 @@ CLASS zcl_http_proxy IMPLEMENTATION.
 
   METHOD if_http_extension~handle_request.
     DATA: lv_response TYPE string,
+          lv_error_msg TYPE string,
           lt_fields   TYPE  tihttpnvp.
     me->path = server->request->get_header_field( '~path' ).
     me->method = server->request->get_method( ).
@@ -56,7 +57,7 @@ CLASS zcl_http_proxy IMPLEMENTATION.
           ).
         CATCH cx_http_client_exception INTO DATA(lx_create_exception).
           " Handle HTTP client creation failure
-          DATA(lv_error_msg) = |HTTP client creation failed: { lx_create_exception->get_text( ) }|.
+          lv_error_msg = |HTTP client creation failed: { lx_create_exception->get_text( ) }|.
           server->response->set_status( code = 502 reason = 'Bad Gateway' ).
           server->response->set_cdata( lv_error_msg ).
           RETURN.
